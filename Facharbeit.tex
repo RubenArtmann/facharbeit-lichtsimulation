@@ -1,0 +1,309 @@
+\documentclass[12pt]{article}
+\author{Ruben Artmann}
+\title{Facharbeit - Lichtsimulation}
+\usepackage[german]{babel}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{sectsty}
+\usepackage{amsmath}
+\usepackage{listings}
+\lstset{
+  columns=fullflexible,
+  frame=single,
+  breaklines=true,
+  postbreak=\mbox{{$\hookrightarrow$}\space},
+}
+\sectionfont{\fontsize{12}{15}\selectfont}
+\subsectionfont{\fontsize{12}{15}\selectfont}
+\usepackage[backend=bibtex,style=verbose]{biblatex}
+\addbibresource{references.bib}
+
+
+
+\begin{document}
+\begin{center}
+	Geschwister-Scholl-Gymnasium Münster\\
+	Schuljahr 2019/20
+	\vspace{50pt}
+
+	\textbf{\Large Lichtsimulation}\\
+	\textbf{Wie gut kann man Licht modellieren und simulieren?}\\
+	\emph{Facharbeit im Leistungskurs Mathematik}
+
+	\vspace{50pt}
+
+	\includegraphics[width=250px]{canvas12.png}
+
+	\vspace{50pt}
+
+	\begin{description}
+		\item[Verfasser:] Ruben Artmann
+		\item[Kursleiterin:] Frau Rahner
+		\item[Abgabetermin:] Montag, 23. März 2020, 9.30 Uhr
+	\end{description}
+\end{center}
+\thispagestyle{empty}
+\newpage
+
+
+\tableofcontents
+\thispagestyle{empty}
+\newpage
+
+
+
+\section{Einleitung}
+	\subsection{Hinführung zum Thema, Themenbegründung und -abgrenzung}
+		Thema dieser Facharbeit ist die Modellierung von Licht in einem Raum und die anschließende Berechnung des eintreffenden Lichtes auf eine imaginäre Kamera mithilfe eines Computers.
+
+		Die Anwendungszwecke einer solchen Lichtsimulation finden sich vor allem dort, wo ein Bild oder ein Film von einem Objekt benötigt wird. In solchen Situationen könnte unter folgenden Fällen eine Simulation bevorzugt werden:
+		\begin{itemize}
+			\item Das Objekt existiert (noch) nicht (Drachen, Raumschiffe)
+			\item Die Simulation soll als Vorschau dienen (Architektur Rendering\footcite{architektur})
+			\item Es ist günstiger als das Objekt zu bauen (Ikea Küchen Katalog\footcite{ikea})
+		\end{itemize}
+
+		Die Algorithmen und Modelle, welche versuchen dieses Problem zu lösen sind vielseitig, weshalb sich diese Facharbeit auf die Lösung der Rendering-Gleichung\footcite{kajiya86} durch einen einfachen Raytracer beschäftigt. 
+\iffalse
+	\subsection{Entwicklung der konkreten Fragestellung und Formulierung der (Leit-)Frage}
+\fi
+	\subsection{Zielsetzung der Arbeit}
+		Das Ziel dieser Facharbeit ist eine Lichtsimulation der Cornell Box\footcite{cornell}, um diese mit physikalischen Messungen zu vergleichen. 
+
+\iffalse
+	\subsection{Aufbau und Methodik der Facharbeit}
+\fi
+
+\section{Hauptteil}
+	\subsection{Modellierung}
+		\subsubsection{Modellierung von Objekten}
+			Weil das Ziel ist ein Bild von einem Objekt zu rendern, ist es sinnvoll erstmal herauszufinden, wie wir diese Objekte Mathematisch beschreiben können. Normalerweise bescheibt man Objekte durch ihr Volumen, also den Stoff aus dem sie bestehen und den Raum, den dieser einnimmt. Allerdings \textbf{vernachlässigen wir die Lichtbrechung}, weil wir keine Lichtsimulation innerhalb von Objekten betreiben werden. Dadurch brauchen wir erstmal nur die \textbf{Oberfläche des Objektes}, solange wir annehmen, dass alle Objekte sich in einem Vakuum befinden, also die geringe \textbf{Interaktion von Luft mit Licht ignorieren}. Für die Oberfläche können wir für einfache Objekte einfach ein Gleichungsystem auftellen, welches alle Punkte auf der Oberfläche als Lösung hat. Zum Beispiel wäre das Gleichungsystem für eine Kugel im Ursprung: 
+			\begin{equation}
+				x^2+y^2+z^2 = r^2
+				\textbf{p}^2 = r^2
+			\end{equation}
+
+		\subsubsection{Modellierung eines (Licht-)Strahls}
+			Ein Strahl kann durch eine Richtung und einen Ursprung festgelegt werden. Da ein Strahl nichts anderes ist, als eine dreidimensionale lineare Funktion mit der Ausnahme von allen Punkten hinter dem Ursprung lautet die Gleichung:
+			\begin{equation}
+				S(t) = \vec{\textbf{r}} * \textit{t} + \textbf{u}
+			\end{equation}
+			Wobei t unter der Bedingung $|\textit{t}| = 1$ die Distanz auf dem Strahl in die Strahlrichtung ist und deshalb nicht negativ ist. 
+
+		\subsubsection{Schnittmenge zwischen Kugel und Strahl}
+			Weil wir uns für die Interaktionen zwischen den Lichtstrahlen und den Objekten interessieren, interessieren wir uns für die Punkte an dem sich diese berühren. Dafür setzen wir einfach die beiden Gleichungen gleich:
+			\begin{align*}
+				&\textbf{p}^2 &&= \textit{r}^2\\
+				&S(t) &&= \vec{\textbf{r}} * \textit{t} + \textbf{u}\\
+				\\
+				&\textbf{p} &&= S(t)\\
+				<=> &(\vec{\textbf{r}} * \textit{t} + \textbf{u})^2 &&= \textit{r}^2\\
+				<=> &(\vec{\textbf{r}} * \textit{t})^2 + 2*(\vec{\textbf{r}} * \textit{t})*(\textbf{u}) + (\textbf{u})^2 &&= \textit{r}^2\\
+				<=> &\vec{\textbf{r}}^2 * \textit{t}^2 + 2*\vec{\textbf{r}}*\textit{t}\textbf{u} + \textbf{u}^2 - \textit{r}^2 &&= 0\\
+				<=> &\textit{t}^2 + 2*\frac{\textit{t}\textbf{u}}{\vec{\textbf{r}}} + \frac{\textbf{u}^2 - \textit{r}^2}{\vec{\textbf{r}}^2} &&= 0\\
+			\end{align*}
+
+			Dar es sich hier um eine Quadratische Funktion handelt, benutzen wir die PQ-Formel zur lösung:
+			\begin{align*}
+				0 &= \textit{t}^2 + 2*\frac{\textit{t}\textbf{u}}{\vec{\textbf{r}}} + \frac{\textbf{u}^2 - \textit{r}^2}{\vec{\textbf{r}}^2}\\
+				p &= 2*\frac{\textbf{u}}{\vec{\textbf{r}}}\\
+				q &= \frac{\textbf{u}^2 - \textit{r}^2}{\vec{\textbf{r}}^2}\\
+				\textit{t} &= -\frac{p}{2} \pm\sqrt{\frac{p}{2}^2-q}
+			\end{align*}
+
+			Wenn wir jetzt $\textit{t}$ wieder in die Strahl-gleichung einsetzen, erhalten wir den Schnittpunkt. 
+
+		\subsubsection{Modellierung der Kamera}
+			Wenn wir jetzt von diesen Objekten ein Bild rendern wollen, brauchen wir etwas equivalentes zu einer Kamera. Weil Ziel dieser Facharbeit nicht die beste Lösung, sondern die einfachste zum Verstehen ist, wählen wir auch die einfachste Kamera, die Loch Kamera. 
+
+			\begin{center}
+				\includegraphics[width=200px]{lochkamera/lochkamera.png}
+			\end{center}
+
+			Sie besteht aus einem Loch und einer Bildebene. 
+			Der Zweck des Loches ist es, nur die Lichtstrahlen, welche in das Auge des betrachters fallen, auszuwählen. Deswegen währe das Loch am besten ein Punkt ohne Ausdehnung, aber dann würde es nicht genug Licht durchlassen, um das Bild sichtbar zu machen. Glücklicher Weise ist dies kein Problem bei unserer Simulation, also wird es durch einen Punkt dargestellt. 
+			Die Bildebene ist die rechteckige Fläche, auf welcher das Bild entsteht. 
+			Sie wird durch ihr Seitenverhältnis und den Winkel des horizontalen Sichtfelds festgelegt. 
+
+
+			Um das Bild in Verbindung mit der Szene zu bringen, müssen wir die Koordinaten des Bildes in die Koordinaten der Bildebene in der Szene bringen: (Um es mir etwas einfacher zu machen, hab ich den Ursprung des Koordinatensystems bei $\textbf{p}_{loch}$ gesetzt)
+
+			\begin{align*}
+				w_{bildebene} &= tan(fov/2)*2\\
+				x &= (x_{bild}*2-1)*\frac{w_{bildebene}}{2}\\
+				y &= (x_{bild}*2-1)*\frac{w_{bildebene}}{2}*h_{bild}/w_{bild}\\
+				z &= 1\\
+				\textbf{p} &= \begin{pmatrix}x,\\ y,\\ z\end{pmatrix}
+			\end{align*}
+
+			Wir wollen aber ein Strahl mit der Richtung von $\textbf{p}_{loch}$ aus, also erzwingen wir $|\vec{\textbf{r}}| = 1$. ($\textbf{p}_{loch}$ ist in diesem Koordinaten system im Ursprung)
+			\begin{align*}
+				d &= |(\textbf{p}-\textbf{p}_{loch})|\\
+				\vec{\textbf{r}}_{lichtstrahl} &= \textbf{p}/d
+			\end{align*}
+
+			Als Ursprung des Lichtstrahls wählen wir $\textbf{p}_{loch}$, weil dieser ein Punkt auf dem Strahl ist. (Wir wollen den Strahl im Koordinaten System der Szene haben, also müssen wir auch $\textbf{p}_{loch}$ aus diesem nehmen) 
+			\begin{align*}
+				u_{lichtstrahl} &= \textbf{p}_{loch}\\
+			\end{align*}
+
+		\subsubsection{Ein erstes Bild}
+			Um unser erstes Bild zu berechnen müssen wir nur jedem Punkt auf dem Bild und damit jedem Punkt auf der Bildebene der Lochkamera eine Farbe zuordnen. Wir haben schon jedem Punkt einen Lichtstrahl zugeordnet, also müssen wir nur noch jedem Lichtstrahl eine Farbe zuordnen. Dafür müssen wir nur den ersten Punkt auf unseren Objekten finden, welcher von dem Strahl getroffen wird. Dazu berechnen wir einfach die Schnittmenge des Strahls mit dem Objekt und wählen den Punkt mit der kürzesten Distanz, also mit minimalem t des Strahls. Wenn wir nun jedem Objekt oder jedem Teil der Oberfläche der Objekte eine Farbe zuweisen, wird auch eine Farbe für jeden Punkt auf dem Bild festgelegt, bis auf Strahlen die keine Schnittpunkte haben, welche wir einfach als Schwarz festlegen. 
+
+
+			Das Ergebnis: 
+
+			\includegraphics[width=200px]{canvas9.png}
+
+		\subsubsection{Die Rendering-Gleichung}
+			Jetzt fehlt uns "nur" noch ein Weg, um die Lichtintensität\footnote{Das was wir vorher einfach als Farbe bezeichnet haben.}, welche man aus einer bestimmten Richtung an dem Auftrittspunkt des Objektes beobachten kann zu modellieren. Das ist einfach eine Funktion, welche von dem Punkt und der Richtung abhängig ist und die Lichtintensität zurückgibt: 
+
+			$$L(x, \vec\omega)$$
+
+			Die einzige Frage die noch bleibt ist, woraus das zu beobachtende Licht besteht. Wenn eine Oberfläche Licht abgibt besteht die Lichtintensität zumindest aus der ausgestrahlten Lichtintensität, wie zum Beispiel von einer Lampe: 
+
+			$$L(x, \vec\omega) = L_e(x, \vec\omega)$$
+
+			Dann kommt natürlich noch das reflektierte Licht dazu. Dass Problem dabei ist, dass jedes Objekt Licht anders reflektiert. Also gehen wir erstmal von einem perfekt diffusen Material aus, denn dann dürfen wir das Lambertsche Kosinusgesetz\footcite{lambert1892lamberts} anwenden, welches besagt, dass das die Strahlungstärke proportional zum Kosinus vom Winkel zwischen dem Lot der Oberfläche und dem Eintrittswinkel ist. Außerdem muss es proportional zum Durchschnitt des einfallenden Licht sein, dar dieses reflektiert wird. Also gilt mit dem Proportionalitätsfaktor k: 
+
+			$$L(x, \vec\omega) = L_e(x, \vec\omega) + L'*k*cos(\theta)$$
+
+			Der Proportionalitätsfaktor k beschreibt dabei wie viel Lichtenergie das Material absorbiert. Dabei kann man außerdem $cos(\theta)$ durch das skalarprodukt von dem Lot n und dem Eintrittswinkel $\vec\omega'$ ersetzen kann: 
+
+			$$L(x, \vec\omega) = L_e(x, \vec\omega) + L'*k(\vec\omega' \cdot \vec n)$$
+
+			Den Durchschnitt der einkommenden Lichtintensität kann man aus dem Durchschnitt der Lichtintensität, welche aus allen Richtungen $\Omega$, welche auserhalb der Oberfläche zeigen (eine Halbkugel) $\Omega_{1/2}$ berechnen. 
+
+			$$L(x, \vec\omega) = L_e(x, \vec\omega) + \int_{\Omega_{1/2}}{L(x, \vec\omega')}*k(\vec\omega' \cdot \vec n)$$
+
+
+			\includegraphics[width=\textwidth]{canvas10_filtered.jpg}
+
+
+
+			Die Aufgestellte Funktion ist ein Spezialfall der Rendergleichung\footcite{kajiya86}, welche den Faktor k durch eine Funktion $f_r(x, \vec\omega', \vec\omega)$ ersetzt. Diese Funktion heißt BRDF(Bidirektionale Reflexionsverteilungsfunktion)\footcite{brdf} und ist eine Funktion, die beschreibt, wieviel Licht die Oberfläche von dem Eintrittswinkel $\vec\omega'$ zu dem Austrittswinkel $\vec\omega$ an dem Punkt $x$ reflektiert: 
+			\begin{equation}
+				L(x, \vec\omega) = L_e(x, \vec\omega) + \int_{\omega}{f_r(x, \vec\omega', \vec\omega) L(x, \vec\omega') (\vec\omega' \cdot \vec n) \mathrm{d}\vec\omega'}
+			\end{equation}
+
+	\subsection{Berechnung/Simulation}
+		Beim berechnen der aufgestellten Funktion stellen sich zwei Probleme. Erstens beruht die Funktion teilweise auf dem Ergebnis von sich selbst mit anderen Parametern, was sich erstmal umgehen lässt, indem man davon ausgeht, dass nach einer bestimmten Rekursionstiefe das Ergebnis ungefähr der durchschnittlichen Lichtintesität in dem Raum (oder einfach einer Konstante (oder sogar 0)) entspricht. Zweitens ist der dadurch mehrdimensionale Integral zu kompliziert, um durch analytische Weise bestimmbar zu sein. Dies wird durch die Annäherung mit numerischen Methoden, nämlich der Monte Carlo Methode, gelöst. 
+		
+		\subsubsection{Monte Carlo}
+			Die Monte Carlo Methode ist eine Methode, mithilfe der man eine Annäherung für das Integrieren über eine Funktion bekommen kann, ohne die Stammfunktion dieser zu wissen. Sie beruht auf dem Gesetz der großen Zahlen, welches besagt, dass mit höherer Anzahl von komplett zufälligen Stichproben, der Durchschnitt dieser sich um den erwarteten Wert stabilisiert: 
+
+			\begin{equation}
+				\lim_{N\to\infty} \frac{1}{N}\sum^N_{k=0}{f(z(k))} = \frac{1}{b-a}\int^{b}_{a}{f(x)}dx
+			\end{equation}
+			Wobei die Funktion z jedem k eine zufällige Zahl auf dem Interval [a,b] aus einer gleichmäßigen Wahrscheinlichkeitsverteilung zuweist oder $z(k) = r(k)*(b-a)+a$ wenn r eine zufällige Zahl aus dem Interval [0,1] zurück gibt. 
+
+			Das ganze nach dem Integral, welches wir berechnen wollen umgeformt:
+			\begin{equation}
+				\int^{b}_{a}{f(x)}dx = \lim_{N\to\infty} \frac{b-a}{N}\sum^N_{k=0}{f(z(k))}
+			\end{equation}
+
+			Natürlich können wir nicht unendlich viele Zahlen aufsummieren, weshalb wir uns mit einer Annäherung zufrieden geben müssen. Das Gute dabei ist aber, dass man relativ einfach nach jeder Erhöhung von k dem Durchschnitt und somit das Ergebnis mit einer besseren Annäherung erneuern kann, weil dieses nicht von k abhängt. 
+		\subsubsection{Auflösung der Rekursion}
+			Der zweite Grund, wieso die Monte Carlo Methode besser als zum Beispiel die Ober oder Untergrenze ist, liegt darin, dass die zu Integrierende nicht mehr immer das Ergebnis liefern muss, sondern nur noch das richtige Ergebnis liefern muss. Wenn die Funktion also sich selbst aufruft, können wir 50\% der Zeit einfach 0 zurückgeben, solange wir im anderen Fall das Ergebnis verdoppeln, denn im Durchschnitt gilt: 
+
+			\begin{equation}
+				2 * 50\% * L(x) = L(x)
+			\end{equation}
+
+			Wieso sollten wir das machen? Unser Problem mit der Rekursion war, dass man um $L(x)$ zu berechnen man Unendlich oft $L(x)$ aufrufen muss, aber nun ist die Wahrscheinlichkeit, dass wir $n$ Aufrufe tätigen müssen: 
+
+			\begin{align*}
+				p(n) &= 50\%^n\\
+				\lim_{n\to\infty} p(n) &= 0
+			\end{align*}
+
+			Also ist die Wahrscheinlichkeit, dass wir unendlich viele Aufrufe Tätigen müssen und deswegen nie mit der Berechnung fertig werden, nun unendlich klein. 
+	\subsection{Darlegung der Ergebnisse und Teilergebnisse und die Folgerungen}
+		\includegraphics[width=200px]{canvas10.png}
+		\includegraphics[width=200px]{canvas10_filtered.jpg}
+		\includegraphics[width=200px]{canvas13.png}
+		\includegraphics[width=200px]{canvas7.png}
+		\includegraphics[width=200px]{canvas8.png}
+		\includegraphics[width=200px]{canvas8_filtered.jpg}
+		\includegraphics[width=200px]{canvas11.png}
+		\includegraphics[width=200px]{canvas11_filtered.jpg}
+
+		[Einige der Bilder (nur auf der rechten Seite) wurden mit eine Programm editiert, welches versucht unter niedrig-licht Bedingungen aufgenommene Photos durch glätten der Oberflächen zu verbessern.]
+
+\section{Schluss}
+	\subsection{Zusammenfassung der Ergebnisse aus dem Hauptteil und Reflexion in Bezug auf die Leitfrage}
+		Im Laufe dieser Facharbeit haben wir ein Modell für das physikalische Phänomen des Lichtes aufgestellt und eine Methode vorgestellt, dieses Modell zu Simulieren. Mit einer sich im Anhang befindender Implementation haben wir eine Möglichkeit ein bekanntes physikalisches Objekt, die Cornell box, zu simulieren. Die Cornell box ist ein Versuchsaufbau der Cornell Universität mit dem Ziel ein Datensatz zu haben, mithilfe dessen man Lichtsimulationsprogramme mit echten Bildern des Versuchsaufbaus zu Vergleichen. 
+
+		Referenz Bild der Cornell box\footnote{http://www.graphics.cornell.edu/online/box/box.jpg}:
+
+
+		\includegraphics[width=200px]{Quellen/box.jpg}
+		\includegraphics[width=200px]{canvas11.png}
+
+		Wie an den Bildern zu erkennen ist, kommt das aufgestellte Modell (rechts) sehr nah an das Referenzbild (links) dran. Der größte Unterschied zwischen den Beiden Bildern besteht darin, dass die Simulation sehr rechenintesiv ist und daher zu wenige Stichproben für die Monte Carlo Methode berechnet wurden und dass die Farben der Wände und der Lampe aufgrund der Unfähigkeit von mir, die in dem Datensatz\footcite{http://www.graphics.cornell.edu/online/box/data.html} gegebenen Wellenlängen in Rot-, Grün- und Blaufarbwerte umzuwandeln. Außerdem vernachlässigt die Simulation die Interaktion von Licht mit Luft und die Wellenlänge des Lichtes. Desweiteren unterstütz unser Modell momentan weder Lichtbrechung noch andere Materialien als komplett diffuse. Allerdings liefert die Simulation zumindest perspektivisch richtige Bilder mit korrekten Schatten und Schattenübergängen. Desweiteren ist auf den Bildern zu erkennen, wie Licht von der Wand gefärbt und in die Schattenbereiche zurückgeworfen wird. 
+\iffalse
+	\subsection{Weiterführende Gedanken}
+		- beschleunigungsstrukturen
+		- weitere Materialien
+		- volumen und lichtbrechung
+
+	TODO:
+		- Ende fertig schreiben
+		- Zeichnung/markierungen auf Bild für kamera
+		- bessere variablen namen + font
+\fi
+
+
+
+\newpage
+\section{Anhang}
+
+\printbibliography
+
+\subsection{Zusätzliche Quellen}
+	Ich kann die PQ-Formel immer noch nicht auswändig: \url{https://www.mathebibel.de/pq-formel}\\
+	Hilfreich beim Versuch Wellenlängen in RGB umzuwandeln: \url{https://www.maxmax.com/Old_Web/images/Cameras/Technical/CanonDLSR_StockResponse.jpg}\\
+	\url{https://de.wikipedia.org/wiki/Gesetz_der_großen_Zahlen}\\
+	\url{https://de.wikipedia.org/wiki/Skalarprodukt}\\
+	\url{https://de.wikipedia.org/wiki/Lambertsches_Gesetz}\\
+	Der kurs an der TU Wien, welcher mein Interesse an dem Thema geweckt hat: \url{https://www.youtube.com/watch?v=pjc1QAI6zS0&list=PLujxSBD-JXgnGmsn7gEyN28P1DnRZG7qi&index=1}\\
+	\url{https://de.wikipedia.org/wiki/Rendergleichung}\\
+	\url{https://en.wikipedia.org/wiki/Monte_Carlo_integration}\\
+	\url{https://de.wikipedia.org/wiki/Bidirektionale_Reflexionsverteilungsfunktion}\\
+	\url{https://de.wikipedia.org/wiki/Bildebene_(Fotografie)}\\
+
+\subsection{Implementation}
+	Wenn man zu faul ist, den Datensatz per Hand einzugeben: \url{https://github.com/LucasReSilva/Cornell-Box/tree/master/Blender%20files}\\
+	Wenn der Render zu lange dauert: \url{http://www.pbr-book.org/3ed-2018/Light_Transport_I_Surface_Reflection/Sampling_Light_Sources.html}\\
+	\url{https://blog.yiningkarlli.com/2013/04/importance-sampled-direct-lighting.html}\\
+	\url{https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/}\\
+
+\subsection{Hilfmittel}
+	\url{https://regexr.com/}\\
+	\url{https://ni.neatvideo.com/download}\\
+
+\verb+ray_tracer/index.html+
+\lstinputlisting[language=html]{ray_tracer/index.html}
+\verb+ray_tracer/camera.js+
+\lstinputlisting{ray_tracer/camera.js}
+\verb+ray_tracer/keyboard.js+
+\lstinputlisting{ray_tracer/keyboard.js}
+\verb+ray_tracer/main.js+
+\lstinputlisting{ray_tracer/main.js}
+\verb+ray_tracer/material.js+
+\lstinputlisting{ray_tracer/material.js}
+\verb+ray_tracer/mesh.js+
+\lstinputlisting{ray_tracer/mesh.js}
+\verb+ray_tracer/scene.js+
+\lstinputlisting{ray_tracer/scene.js}
+\verb+ray_tracer/settings.js+
+\lstinputlisting{ray_tracer/settings.js}
+\verb+ray_tracer/tonemapper.js+
+\lstinputlisting{ray_tracer/tonemapper.js}
+
+% \verb+ray_tracer/gl-matrix.js+
+% \lstinputlisting{ray_tracer/gl-matrix.js}
+% \verb+ray_tracer/webgl-obj-loader.js+
+% \lstinputlisting{ray_tracer/webgl-obj-loader.js}
+
+\end{document}
